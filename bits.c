@@ -151,7 +151,7 @@ int bitAnd(int x, int y) {
  */
 int getByte(int x, int n) {
    n = n << 3; //n * 8
-   x = (x >> n) & 0xff // 右移n位
+   x = (x >> n) & 0xff; // 右移n位
    return x;
 }
 /*
@@ -177,7 +177,19 @@ int logicalShift(int x, int n) {
  *   Rating: 4
  */
 int bitCount(int x) {
-  return 2;
+  int sum = 0;
+  int i = 0x11 | (0x11 << 8);
+  int j = i | (i << 16); // j = 0x11111111
+
+  sum = j & x;
+  sum += (x >> 1) & j;
+  sum += (x >> 2) & j;
+  sum += (x >> 3) & j;
+  sum = (sum >> 16) + (0xffff & sum);
+  i = 0xf | (0xf << 8);
+  sum = (sum & i) + ((sum >> 4) & i);
+
+  return sum;
 }
 /*
  * bang - Compute !x without using !
@@ -187,7 +199,9 @@ int bitCount(int x) {
  *   Rating: 4
  */
 int bang(int x) {
-  return ;
+  int i = ~x + 1; //相反数
+  int j = (i >> 31) | (x >> 31); //符号相同则为0，不同为1
+  return j + 1;
 }
 /*
  * tmin - return minimum two's complement integer
@@ -196,7 +210,7 @@ int bang(int x) {
  *   Rating: 1
  */
 int tmin(void) {
-  return 2;
+  return 1 << 31;
 }
 /*
  * fitsBits - return 1 if x can be represented as an
@@ -207,8 +221,10 @@ int tmin(void) {
  *   Max ops: 15
  *   Rating: 2
  */
+ //左移32-n位，右移32-n位，若不变
 int fitsBits(int x, int n) {
-  return 2;
+  int i = 32 + (~n + 1);
+  return !(x ^ ((x << i) >> i));
 }
 /*
  * divpwr2 - Compute x/(2^n), for 0 <= n <= 30
@@ -219,6 +235,7 @@ int fitsBits(int x, int n) {
  *   Rating: 2
  */
 int divpwr2(int x, int n) {
+
     return 2;
 }
 /*
@@ -229,7 +246,7 @@ int divpwr2(int x, int n) {
  *   Rating: 2
  */
 int negate(int x) {
-  return 2;
+  return ~x + 1;
 }
 /*
  * isPositive - return 1 if x > 0, return 0 otherwise
