@@ -222,9 +222,11 @@ int tmin(void) {
  *   Rating: 2
  */
  //左移32-n位，右移32-n位，若不变
+ //产生 fitsBits(0x80000000,32) = 0错误
 int fitsBits(int x, int n) {
   int i = 32 + (~n + 1);
-  return !(x ^ ((x << i) >> i));
+  int a = (x << i) >> i;
+  return !(x ^ a);
 }
 /*
  * divpwr2 - Compute x/(2^n), for 0 <= n <= 30
@@ -234,9 +236,13 @@ int fitsBits(int x, int n) {
  *   Max ops: 15
  *   Rating: 2
  */
+ //正数直接移位，负数会向下舍入
 int divpwr2(int x, int n) {
-
-    return 2;
+  int a;
+  int m = x >> 31;
+  a = !m & (!!x);
+  //a = ((x + (~0 + 1)) << 31) & 0x00000001; //x为正数a=0,x为负数a=1
+  return (x + (a << n) - a) >> n;
 }
 /*
  * negate - return -x
@@ -256,7 +262,9 @@ int negate(int x) {
  *   Rating: 3
  */
 int isPositive(int x) {
-  return 2;
+  int m = (x >> 31) & 1; //m的符号位
+  int i = !!x; 
+  return i ^ m;
 }
 /*
  * isLessOrEqual - if x <= y  then return 1, else return 0
