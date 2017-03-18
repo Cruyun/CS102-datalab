@@ -176,6 +176,7 @@ int logicalShift(int x, int n) {
  *   Max ops: 40
  *   Rating: 4
  */
+ //存疑
 int bitCount(int x) {
   int sum = 0;
   int i = 0x11 | (0x11 << 8);
@@ -185,12 +186,15 @@ int bitCount(int x) {
   sum += (x >> 1) & j;
   sum += (x >> 2) & j;
   sum += (x >> 3) & j;
-  sum = (sum >> 16) + (0xffff & sum);
-  i = 0xf | (0xf << 8);
+  i = 0xff | (0xff << 8);
+  sum = (sum >> 16) + (i & sum);
+  i = 0x0f | (0x0f<<8);
   sum = (sum & i) + ((sum >> 4) & i);
-
+  i = 0xff;
+  sum = (sum >> 8) + (i & sum);
   return sum;
 }
+
 /*
  * bang - Compute !x without using !
  *   Examples: bang(3) = 0, bang(0) = 1
@@ -236,14 +240,21 @@ int fitsBits(int x, int n) {
  *   Max ops: 15
  *   Rating: 2
  */
- //正数直接移位，负数会向下舍入
+//正数 x >> n;
+//负数 (x + 1<<n - 1)>>n
 int divpwr2(int x, int n) {
-  int a;
-  int m = x >> 31;
-  a = !m & (!!x);
-  //a = ((x + (~0 + 1)) << 31) & 0x00000001; //x为正数a=0,x为负数a=1
-  return (x + (a << n) - a) >> n;
+  int isNeg = x >> 31;
+  int a = ((isNeg & 1) << n) + isNeg;
+  return (x + a) >> n;
 }
+//学姐的方法
+//   int a;
+//   int m = x >> 31;
+//   a = !m & (!!x);
+//   return (x + (a << n) - a) >> n;
+// zk的方法
+//a = ((x + (~0 + 1)) << 31) & 0x00000001; //x为正数a=0,x为负数a=1
+// }
 /*
  * negate - return -x
  *   Example: negate(1) = -1.
@@ -263,7 +274,7 @@ int negate(int x) {
  */
 int isPositive(int x) {
   int m = (x >> 31) & 1; //m的符号位
-  int i = !!x; 
+  int i = !!x;
   return i ^ m;
 }
 /*
