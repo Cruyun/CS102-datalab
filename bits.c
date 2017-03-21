@@ -176,7 +176,6 @@ int logicalShift(int x, int n) {
  *   Max ops: 40
  *   Rating: 4
  */
- //存疑
 int bitCount(int x) {
   int sum = 0;
   int i = 0x11 | (0x11 << 8);
@@ -186,9 +185,9 @@ int bitCount(int x) {
   sum += (x >> 1) & j;
   sum += (x >> 2) & j;
   sum += (x >> 3) & j;
-  i = 0xff | (0xff << 8);
+  i = 0xff | (0xff << 8); //i = 0xffff
   sum = (sum >> 16) + (i & sum);
-  i = 0x0f | (0x0f<<8);
+  i = 0x0f | (0x0f<<8); //i = 0x0f0f
   sum = (sum & i) + ((sum >> 4) & i);
   i = 0xff;
   sum = (sum >> 8) + (i & sum);
@@ -214,7 +213,7 @@ int bang(int x) {
  *   Rating: 1
  */
 int tmin(void) {
-  return 1 << 31;
+  return 1 << 31; //0x10000000
 }
 /*
  * fitsBits - return 1 if x can be represented as an
@@ -225,8 +224,7 @@ int tmin(void) {
  *   Max ops: 15
  *   Rating: 2
  */
- //左移32-n位，右移32-n位，若不变
- //产生 fitsBits(0x80000000,32) = 0错误
+ //左移32-n位，右移32-n位，若不变则 retrun 1
 int fitsBits(int x, int n) {
   int i = 32 + (~n + 1);
   int a = (x << i) >> i;
@@ -284,8 +282,15 @@ int isPositive(int x) {
  *   Max ops: 24
  *   Rating: 3
  */
-int isLessOrEqual(int x, int y) {
-  return 2;
+ // return 1 : x<0,y>0 or x - y <= 0
+  int isLessOrEqual(int x, int y) {
+
+  int m = (~x + 1) + y; //y-x
+  int p = !!(x>>31); //x的符号位
+  int q = !!(y>>31); //y的符号位
+  int i = !(m >> 31); //y-x>=0时i==1
+  int j = ! (p ^ q); // 判断是否同号
+  return (i&j) | (p&!q);
 }
 /*
  * ilog2 - return floor(log base 2 of x), where x > 0
@@ -294,8 +299,18 @@ int isLessOrEqual(int x, int y) {
  *   Max ops: 90
  *   Rating: 4
  */
+ //返回不超过以2为底x对数的最小整数。找最高位的1出现的位置
 int ilog2(int x) {
-  return 2;
+  int mark=0;
+    mark=(!!(x>>16))<<4;
+    mark=mark+((!!(x>>(mark+8)))<<3);
+    mark=mark+((!!(x>>(mark+4)))<<2);
+    mark=mark+((!!(x>>(mark+2)))<<1);
+    mark=mark+((!!(x>>(mark+1)))<<0);
+
+    mark=mark+(!!mark)+(~0)+(!(1^x)); //考虑x=0
+
+    return mark;
 }
 /*
  * float_neg - Return bit-level equivalent of expression -f for
@@ -308,8 +323,17 @@ int ilog2(int x) {
  *   Max ops: 10
  *   Rating: 2
  */
+ //NaN时返回NaN,否则改变符号位
 unsigned float_neg(unsigned uf) {
- return 2;
+  unsigned result;
+  unsigned m;
+
+  result = uf ^ 0x80000000;
+  m = uf & 0x7fffffff;
+  if (m > 0x7f800000) {
+    result = uf;
+  }
+  return result;
 }
 /*
  * float_i2f - Return bit-level equivalent of expression (float) x
@@ -321,6 +345,12 @@ unsigned float_neg(unsigned uf) {
  *   Rating: 4
  */
 unsigned float_i2f(int x) {
+  unsigned s = 0;
+  unsigned exp = 31;
+  unsigned frac = 0;
+  unsigned  = 0;
+
+  
   return 2;
 }
 /*
