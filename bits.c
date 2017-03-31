@@ -345,13 +345,21 @@ unsigned float_neg(unsigned uf) {
  *   Rating: 4
  */
 unsigned float_i2f(int x) {
-  unsigned s = 0;
-  unsigned exp = 31;
-  unsigned frac = 0;
-  unsigned  = 0;
+  unsigned s = 0, exp = 31, frac = 0, d = 0;
+  if (x == 0x00000000u) return 0x00000000u;
+  if (x & 0x80000000u) {
+    s = 0x80000000u;
+    x = -x; }
+  while (1) {
+  if (x & 0x80000000u) break;
+    exp -= 1;    //exp记录最高位的位置
+    x <<= 1;
+  }
+  if ((x & 0x000001ff) == 0x180) d = 1;   //最后舍掉的8位若最高位为1且低七位仍有数，要进位
+  else if ((x & 0xff) > 0x80) d = 1;
+  frac = ((x & 0x7fffffffu) >> 8) + d;   //franc记录尾数
 
-  
-  return 2;
+  return s + ((exp + 127) << 23) + frac;
 }
 /*
  * float_twice - Return bit-level equivalent of expression 2*f for
@@ -365,5 +373,9 @@ unsigned float_i2f(int x) {
  *   Rating: 4
  */
 unsigned float_twice(unsigned uf) {
-  return 2;
+  if((uf & 0x7F800000) == 0)   // 若是指数为0情况
+    return (uf << 1) | (0x80000000 & uf);//特殊情况0x80000000
+  else if((uf & 0x7fffffff) >= 0x7f800000)   //若数为NaN
+    return uf;
+  return uf + 0x00800000;
 }
