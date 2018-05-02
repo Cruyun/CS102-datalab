@@ -138,6 +138,8 @@ NOTES:
  *   Max ops: 8
  *   Rating: 1
  */
+// 用 ~ 和 | 实现 &
+// 摩尔定律 x & y = ~(~(x & y))
 int bitAnd(int x, int y) {
   return ~((~x) | (~y));
 }
@@ -149,6 +151,9 @@ int bitAnd(int x, int y) {
  *   Max ops: 6
  *   Rating: 2
  */
+// 提取数x中从右数的第 n 个字节(0<= n <= 3)
+ 
+// 1个字节是8位
 int getByte(int x, int n) {
    n = n << 3; //n * 8
    x = (x >> n) & 0xff; // 右移n位
@@ -161,7 +166,14 @@ int getByte(int x, int n) {
  *   Legal ops: ! ~ & ^ | + << >>
  *   Max ops: 20
  *   Rating: 3
- */
+  */
+// 实现逻辑右移
+// x 右移 n 位，和0x0fffffff 做 与运算将前 n 位置0
+// 0000 0000 0000 0000 0000 0000 0000 0001
+// 1000 0000 0000 0000 0000 0000 0000 0000
+// 0111 1111 1111 1111 1111 1111 1111 1111
+// 0000 0111 1111 1111 1111 1111 1111 1111
+// 0000 1111 1111 1111 1111 1111 1111 1111
 //100000000000000000000000000000
 //111110000000000000000000000000
 //111100000000000000000000000000
@@ -176,23 +188,71 @@ int logicalShift(int x, int n) {
  *   Max ops: 40
  *   Rating: 4
  */
+// 计算 x 的二进制表示里面有几个1：分治法，把每一位都当成独立的数，并求和
+// 方法一：
+// 参考链接 https://stackoverflow.com/questions/3815165/how-to-implement-bitcount-using-only-bitwise-operators
 int bitCount(int x) {
-  int sum = 0;
-  int i = 0x11 | (0x11 << 8);
-  int j = i | (i << 16); // j = 0x11111111
+  int tmp, mask1, mask2, mask3, mask4, mask5, sum;
 
-  sum = j & x;
-  sum += (x >> 1) & j;
-  sum += (x >> 2) & j;
-  sum += (x >> 3) & j;
-  i = 0xff | (0xff << 8); //i = 0xffff
-  sum = (sum >> 16) + (i & sum);
-  i = 0x0f | (0x0f<<8); //i = 0x0f0f
-  sum = (sum & i) + ((sum >> 4) & i);
-  i = 0xff;
-  sum = (sum >> 8) + (i & sum);
+  // mask1: 0x55555555
+  tmp = 0x55 | (0x55 << 8);
+  mask1 = tmp | (tmp << 16);
+
+  // mask2: 0x33333333
+  tmp = 0x33 | (0x33 << 8);
+  mask2 = tmp | (tmp << 16);
+
+  // mask3: 0x0f0f0f0f
+  tmp = 0x0f | (0x0f << 8);
+  mask3 = tmp | (tmp << 16);
+
+  // mask4: 0x00ff00ff
+  mask4 = 0xFF | (0xFF << 16);
+
+  // mask5: 0x0000ffff
+  tmp = 0xFF | (0xFF << 8);
+  mask5 = tmp | (0 << 16);
+
+  sum = (x & mask1) + ((x >> 1) & mask1);
+  sum = (sum & mask2) + ((sum >> 2) & mask2);
+  sum = (sum & mask3) + ((sum >> 4) & mask3);
+  sum = (sum & mask4) + ((sum >> 8) & mask4);
+  sum = (sum & mask5) + ((sum >> 16) & mask5);
+
   return sum;
 }
+// 方法二：
+/*
+int bitCount(int x) {
+  int sum = 0;
+  // i = 0x11111111
+  int i = 0x11 | (0x11 << 8);
+  i = i | (i << 16);
+  
+  //对于每四位，通过不停的移位运算将前三位的1加到第四位上
+  sum += x & i;
+  sum += (x >> 1) & i;
+  sum += (x >> 2) & i;
+  sum += (x >> 3) & i;
+
+  //令i = 0xffff;
+  i = 0xff | (0xff<<8);
+
+  //将前16位与后16位相加
+  sum = (sum >> 16) + (i & sum);
+
+  //令i = 0x0f0f
+  //整理每8位之和
+  i = 0x0f | (0x0f<<8);
+  sum = ((sum >> 4) & i) + (sum & i);
+
+  //将前8位与后8位相加
+  i = 0xff;
+  sum = (sum >> 8) + (i & sum);
+  
+  return sum;
+}
+*/
 
 /*
  * bang - Compute !x without using !
@@ -201,9 +261,14 @@ int bitCount(int x) {
  *   Max ops: 12
  *   Rating: 4
  */
+// 不使用！计算！x
+// if x == 0, !x = 1 ; else !x = 0
+// 注意：-0 = +0 = 0，要区分0和其他数
+// 要把0与其它数区分开来，考虑到-0 = +0 = 0，-x只有在x=0时符号位才不会改变。故只需利用x | (-x) = x | (~x + 1)的符号位即可。
+// 零的特殊之处，零和零的相反数首位都是零，所以按位或的话只有零的首位还是零，
 int bang(int x) {
   int i = ~x + 1; //相反数
-  int j = (i >> 31) | (x >> 31); //符号相同则为0，不同为1
+  int j = (i | x) >> 31; //符号相同则为0，不同为1
   return j + 1;
 }
 /*
@@ -212,8 +277,10 @@ int bang(int x) {
  *   Max ops: 4
  *   Rating: 1
  */
+// return maximum two's complement integer  : ~(1<<31);  
 int tmin(void) {
-  return 1 << 31; //0x10000000
+  return 0x80 << 24; // 0x80000000
+  // return 1 << 31;
 }
 /*
  * fitsBits - return 1 if x can be represented as an
@@ -224,6 +291,7 @@ int tmin(void) {
  *   Max ops: 15
  *   Rating: 2
  */
+//如果x可以表示为n位二进制补码形式,则返回1，否则返回0
  //左移32-n位，右移32-n位，若不变则 retrun 1
 int fitsBits(int x, int n) {
   int i = 32 + (~n + 1);
@@ -238,13 +306,16 @@ int fitsBits(int x, int n) {
  *   Max ops: 15
  *   Rating: 2
  */
+// 计算x/(2^n)
 //正数 x >> n;
-//负数 (x + 1<<n - 1)>>n
+//负数 (x + 1 << n - 1) >> n
 int divpwr2(int x, int n) {
+  // 取符号位
   int isNeg = x >> 31;
   int a = ((isNeg & 1) << n) + isNeg;
   return (x + a) >> n;
 }
+
 //学姐的方法
 //   int a;
 //   int m = x >> 31;
