@@ -174,12 +174,10 @@ int getByte(int x, int n) {
 // 0111 1111 1111 1111 1111 1111 1111 1111
 // 0000 0111 1111 1111 1111 1111 1111 1111
 // 0000 1111 1111 1111 1111 1111 1111 1111
-//100000000000000000000000000000
-//111110000000000000000000000000
-//111100000000000000000000000000
-//000011111111111111111111111111
 int logicalShift(int x, int n) {
-  return (x >> n) & (~((1 << 31) >> n << 1)); //x逻辑右移n位，前n位置0
+  int mask;
+  mask  = ~((1 << 31) >> n << 1);
+  return (x >> n) & mask; //x右移n位，前n位置0
 }
 /*
  * bitCount - returns count of number of 1's in word
@@ -261,13 +259,12 @@ int bitCount(int x) {
  *   Max ops: 12
  *   Rating: 4
  */
-// 不使用！计算！x
+// 不使用! 计算! x
 // if x == 0, !x = 1 ; else !x = 0
-// 注意：-0 = +0 = 0，要区分0和其他数
 // 要把0与其它数区分开来，考虑到-0 = +0 = 0，-x只有在x=0时符号位才不会改变。故只需利用x | (-x) = x | (~x + 1)的符号位即可。
 // 零的特殊之处，零和零的相反数首位都是零，所以按位或的话只有零的首位还是零，
 int bang(int x) {
-  int i = ~x + 1; //相反数
+  int i = ~x + 1;
   int j = (i | x) >> 31; //符号相同则为0，不同为1
   return j + 1;
 }
@@ -291,8 +288,8 @@ int tmin(void) {
  *   Max ops: 15
  *   Rating: 2
  */
-//如果x可以表示为n位二进制补码形式,则返回1，否则返回0
- //左移32-n位，右移32-n位，若不变则 retrun 1
+// 如果x可以表示为n位二进制补码形式,则返回1，否则返回0
+// 左移32-n位，右移32-n位，若不变则 return 1
 int fitsBits(int x, int n) {
   int i = 32 + (~n + 1);
   int a = (x << i) >> i;
@@ -310,20 +307,10 @@ int fitsBits(int x, int n) {
 //正数 x >> n;
 //负数 (x + 1 << n - 1) >> n
 int divpwr2(int x, int n) {
-  // 取符号位
-  int isNeg = x >> 31;
-  int a = ((isNeg & 1) << n) + isNeg;
-  return (x + a) >> n;
+  int bias = (1 << n) + ~0;
+  return (x + ((x >> 31) & bias)) >> n;
 }
 
-//学姐的方法
-//   int a;
-//   int m = x >> 31;
-//   a = !m & (!!x);
-//   return (x + (a << n) - a) >> n;
-// zk的方法
-//a = ((x + (~0 + 1)) << 31) & 0x00000001; //x为正数a=0,x为负数a=1
-// }
 /*
  * negate - return -x
  *   Example: negate(1) = -1.
@@ -354,14 +341,13 @@ int isPositive(int x) {
  *   Rating: 3
  */
  // return 1 : x<0,y>0 or x - y <= 0
-  int isLessOrEqual(int x, int y) {
-
-  int m = (~x + 1) + y; //y-x
-  int p = !!(x>>31); //x的符号位
-  int q = !!(y>>31); //y的符号位
-  int i = !(m >> 31); //y-x>=0时i==1
+int isLessOrEqual(int x, int y) {
+  int m = (~x + 1) + y; // y - x
+  int p = !!(x >> 31); // x 的符号位
+  int q = !!(y >> 31); // y 的符号位
+  int i = !(m >> 31); // y - x >=0 时 i == 1
   int j = ! (p ^ q); // 判断是否同号
-  return (i&j) | (p&!q);
+  return (i & j) | (p & !q );
 }
 /*
  * ilog2 - return floor(log base 2 of x), where x > 0
@@ -372,16 +358,16 @@ int isPositive(int x) {
  */
  //返回不超过以2为底x对数的最小整数。找最高位的1出现的位置
 int ilog2(int x) {
-  int mark=0;
-    mark=(!!(x>>16))<<4;
-    mark=mark+((!!(x>>(mark+8)))<<3);
-    mark=mark+((!!(x>>(mark+4)))<<2);
-    mark=mark+((!!(x>>(mark+2)))<<1);
-    mark=mark+((!!(x>>(mark+1)))<<0);
+  int mark;
+  mark = (!!(x >> 16)) << 4;
+  mark +=  ((!!(x >> (mark + 8))) << 3);
+  mark += ((!!(x >> (mark + 4))) << 2);
+  mark += ((!!(x >> (mark + 2))) << 1);
+  mark += ((!!(x >> (mark + 1))) << 0);
 
-    mark=mark+(!!mark)+(~0)+(!(1^x)); //考虑x=0
+  mark += (!!mark) + (~0) + (!(1 ^ x)); //考虑x=0
 
-    return mark;
+  return mark;
 }
 /*
  * float_neg - Return bit-level equivalent of expression -f for
@@ -417,18 +403,19 @@ unsigned float_neg(unsigned uf) {
  */
 unsigned float_i2f(int x) {
   unsigned s = 0, exp = 31, frac = 0, d = 0;
-  if (x == 0x00000000u) return 0x00000000u;
-  if (x & 0x80000000u) {
-    s = 0x80000000u;
-    x = -x; }
-  while (1) {
-  if (x & 0x80000000u) break;
-    exp -= 1;    //exp记录最高位的位置
-    x <<= 1;
+  if (x == 0) return 0;
+  if (x & 0x80000000) {
+    s = 0x80000000;
+    x = -x;
   }
-  if ((x & 0x000001ff) == 0x180) d = 1;   //最后舍掉的8位若最高位为1且低七位仍有数，要进位
+  while (1) {
+    if (x & 0x80000000) break;
+      exp -= 1;    //exp记录最高位的位置
+      x <<= 1;
+  }
+  if ((x & 0x1ff) == 0x180) d = 1;   //最后舍掉的8位若最高位为1且低七位仍有数，要进位
   else if ((x & 0xff) > 0x80) d = 1;
-  frac = ((x & 0x7fffffffu) >> 8) + d;   //franc记录尾数
+  frac = ((x & 0x7fffffff) >> 8) + d;   //franc记录尾数
 
   return s + ((exp + 127) << 23) + frac;
 }
